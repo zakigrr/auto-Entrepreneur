@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>حاسبة استيراد وسفر - متطورة</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#1ea7ff;--muted:#9aa7b2;--success:#16a34a;--danger:#ef4444}
+    html,body{height:100%;margin:0}
+    body{font-family:Inter, Arial, Helvetica, sans-serif;background:linear-gradient(180deg,#071029 0%, #0a2236 60%), url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop&ixlib=rb-4.0.3&s=8f6b6ef1d2f8f0a9e3a1a6d6f4a2b9c3') center/cover no-repeat;color:#fff;padding:20px;box-sizing:border-box}
+    .app{max-width:1200px;margin:0 auto;background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(2,6,23,0.6)}
+    header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid rgba(255,255,255,0.04)}
+    header h1{margin:0;font-size:20px}
+    .controls{display:flex;gap:10px;align-items:center}
+    .btn{background:var(--accent);color:#042033;padding:8px 12px;border-radius:10px;border:0;cursor:pointer;font-weight:600}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.08);color:#fff}
+    main{display:flex;gap:18px;padding:18px}
+    .panel{background:transparent;padding:12px;border-radius:12px;flex:1;min-width:280px}
+    .card{background:rgba(255,255,255,0.02);padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=number], input[type=text], select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:#fff}
+    .row{display:flex;gap:10px}
+    .row .col{flex:1}
+    table{width:100%;border-collapse:collapse;margin-top:12px;color:#e6eef6}
+    th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.03);text-align:right}
+    .muted{color:var(--muted);font-size:13px}
+    .product-list{margin-top:12px}
+    .product{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+    .product input{flex:1}
+    .small{font-size:12px;color:var(--muted)}
+    .highlight-danger{background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);padding:8px;border-radius:8px}
+    .highlight-success{background:rgba(22,163,74,0.06);border:1px solid rgba(22,163,74,0.12);padding:8px;border-radius:8px}
+
+    /* invoice print styles */
+    @media print{
+      body{background:#fff;color:#000}
+      header, .controls, .btn, .secondary{display:none}
+      .app{box-shadow:none;border-radius:0;padding:0}
+      main{display:block}
+      .no-print{display:none}
+    }
+
+    /* language direction box */
+    .lang-switch{display:flex;gap:6px}
+    .lang-switch button{padding:6px 8px;border-radius:8px;border:0;background:rgba(255,255,255,0.03);color:#fff;cursor:pointer}
+
+    .summary{margin-top:12px;padding:10px;border-radius:10px}
+    .status{font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1 id="title">حاسبة استيراد وسفر — متطورة</h1>
+      <div class="controls">
+        <div class="lang-switch">
+          <button data-lang="ar" class="active">عربي</button>
+          <button data-lang="fr">Fr</button>
+          <button data-lang="en">EN</button>
+        </div>
+        <button class="btn" id="addProductBtn">إضافة منتج</button>
+        <button class="btn secondary" id="printPage">طباعة كاملة</button>
+        <button class="btn" id="printInvoice">طباعة فاتورة (منتجات)</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- LEFT: Rates & Travel -->
+      <section class="panel">
+        <div class="card">
+          <h3 id="leftTitle">سعر رسمي وبيانات تحويل</h3>
+          <div class="row">
+            <div class="col">
+              <label id="lblRate">سعر 1 يورو مقابل دينار جزائري (رسمي)</label>
+              <input id="rateLeft" type="number" step="0.01" value="200" />
+            </div>
+            <div class="col">
+              <label id="lblAmount">كمية اليورو للتحويل</label>
+              <input id="amountEuroLeft" type="number" step="0.01" value="1000" />
+            </div>
+          </div>
+
+          <label id="lblConverted">المجموع بالـ DZD (محسوب تلقائياً)</label>
+          <input id="amountDzdLeft" type="text" readonly />
+
+          <h4 id="hTravel">مصاريف السفر</h4>
+          <div class="row">
+            <div class="col"><label id="lblVisa">فيزا</label><input id="visaLeft" type="number" step="0.01" value="0" /></div>
+            <div class="col"><label id="lblTicket">تذكرة</label><input id="ticketLeft" type="number" step="0.01" value="0" /></div>
+          </div>
+          <div class="row" style="margin-top:8px">
+            <div class="col"><label id="lblHotel">فندق</label><input id="hotelLeft" type="number" step="0.01" value="0" /></div>
+            <div class="col"><label id="lblFood">أكل ونقل</label><input id="foodLeft" type="number" step="0.01" value="0" /></div>
+          </div>
+          <label id="lblExtra">مصاريف زائدة</label>
+          <input id="extraLeft" type="number" step="0.01" value="0" />
+
+          <div style="margin-top:8px" class="small">تنبيه: إذا تجاوز إجمالي التحويل بالـ DZD <strong>1,800,000</strong> سيظهر تنبيه أحمر.</div>
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3 id="productsTitle">المنتجات (قابلة للإضافة)</h3>
+          <div id="products" class="product-list"></div>
+          <div class="small">لكل منتج: أدخل سعر الجملة (EUR)، سعر البيع القطعة (EUR)، عدد القطع، ونسبة فائدة (إن وُجدت)</div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT: Summary & Totals -->
+      <aside class="panel">
+        <div class="card">
+          <h3 id="summaryTitle">الملخص والحسابات</h3>
+
+          <table>
+            <tr><td id="lblGoodsTotal">قيمة البضاعة (جميع المنتجات) بالـ EUR</td><td id="goodsEurTotal">-</td></tr>
+            <tr><td id="lblGoodsDzd">قيمة البضاعة بالـ DZD</td><td id="goodsDzdTotal">-</td></tr>
+            <tr><td id="lblCustoms">الجمركة (5%)</td><td id="customsTotal">-</td></tr>
+            <tr><td id="lblPlus30">سعر البضاعة +30%</td><td id="goodsPlus30Total">-</td></tr>
+            <tr><td id="lblTax">ضريبة الدولة (0.5%)</td><td id="taxTotal">-</td></tr>
+            <tr><td id="lblTravelSum">مصاريف السفر</td><td id="travelSum">-</td></tr>
+            <tr class="total"><td>الإجمالي الكلي (DZD)</td><td id="grandTotal">-</td></tr>
+          </table>
+
+          <div class="summary">
+            <div>سعر الصرف المستخدم: <span id="usedRate">-</span></div>
+            <div>إجمالي سعر الشراء بالجملة: <span id="wholesaleTotal">-</span> EUR</div>
+            <div>إجمالي سعر البيع المتوقع: <span id="retailTotal">-</span> EUR</div>
+            <div>مجموع القطع: <span id="totalPieces">-</span></div>
+            <div class="status" id="profitStatus">حالة الربح: -</div>
+            <div>نسبة الربح الإجمالية: <span id="profitPercent">-</span>%</div>
+            <div>الربح الصافي (بعد جميع التكاليف): <span id="netProfit">-</span> DZD</div>
+          </div>
+
+        </div>
+
+        <div class="card" style="margin-top:12px">
+          <h3 id="invoiceTitle">خيارات الفاتورة والطباعة</h3>
+          <div class="small">يمكنك طباعة الصفحة كاملة أو طباعة فاتورة تحتوي فقط على قائمة المنتجات وتفاصيل الأسعار.</div>
+          <div style="margin-top:8px">
+            <label>سعر اليمين (سعر السوق) — اختياري</label>
+            <input id="rateRight" type="number" step="0.01" value="200" />
+            <label style="margin-top:8px">ربط سعر اليمين باليسار</label>
+            <select id="linkMode"><option value="linked">مربوط</option><option value="independent">مستقل</option></select>
+          </div>
+        </div>
+
+      </aside>
+    </main>
+  </div>
+
+  <script>
+    // ====== إعدادات اللغات ======
+    const translations = {
+      ar: {
+        title:'حاسبة استيراد وسفر — متطورة', leftTitle:'سعر رسمي وبيانات تحويل', lblRate:'سعر 1 يورو مقابل دينار جزائري (رسمي)', lblAmount:'كمية اليورو للتحويل', lblConverted:'المجموع بالـ DZD (محسوب تلقائياً)', hTravel:'مصاريف السفر', lblVisa:'فيزا', lblTicket:'تذكرة', lblHotel:'فندق', lblFood:'أكل ونقل', lblExtra:'مصاريف زائدة', productsTitle:'المنتجات (قابلة للإضافة)', summaryTitle:'الملخص والحسابات', invoiceTitle:'خيارات الفاتورة والطباعة', addProduct:'إضافة منتج'
+      },
+      fr: {
+        title:'Calculateur Import & Voyage — Avancé', leftTitle:'Taux officiel & Conversion', lblRate:'Prix 1 EUR en DZD (officiel)', lblAmount:'Montant en EUR', lblConverted:'Total en DZD (auto)', hTravel:'Frais de voyage', lblVisa:'Visa', lblTicket:'Billet', lblHotel:'Hôtel', lblFood:'Nourriture & Transport', lblExtra:'Frais supplémentaires', productsTitle:'Produits (ajoutables)', summaryTitle:'Résumé & Calculs', invoiceTitle:'Options Facture & Impression', addProduct:'Ajouter produit'
+      },
+      en: {
+        title:'Import & Travel Calculator — Advanced', leftTitle:'Official Rate & Conversion', lblRate:'1 EUR to DZD (official rate)', lblAmount:'Amount in EUR', lblConverted:'Total in DZD (auto)', hTravel:'Travel Expenses', lblVisa:'Visa', lblTicket:'Ticket', lblHotel:'Hotel', lblFood:'Food & Transport', lblExtra:'Extra expenses', productsTitle:'Products (addable)', summaryTitle:'Summary & Calculations', invoiceTitle:'Invoice & Print Options', addProduct:'Add product'
+      }
+    };
+
+    function setLang(lang){
+      const L = translations[lang];
+      document.getElementById('title').textContent = L.title;
+      document.getElementById('leftTitle').textContent = L.leftTitle;
+      document.getElementById('lblRate').textContent = L.lblRate;
+      document.getElementById('lblAmount').textContent = L.lblAmount;
+      document.getElementById('lblConverted').textContent = L.lblConverted;
+      document.getElementById('hTravel').textContent = L.hTravel;
+      document.getElementById('lblVisa').textContent = L.lblVisa;
+      document.getElementById('lblTicket').textContent = L.lblTicket;
+      document.getElementById('lblHotel').textContent = L.lblHotel;
+      document.getElementById('lblFood').textContent = L.lblFood;
+      document.getElementById('lblExtra').textContent = L.lblExtra;
+      document.getElementById('productsTitle').textContent = L.productsTitle;
+      document.getElementById('summaryTitle').textContent = L.summaryTitle;
+      document.getElementById('invoiceTitle').textContent = L.invoiceTitle;
+      document.getElementById('addProductBtn').textContent = L.addProduct;
+    }
+
+    document.querySelectorAll('.lang-switch button').forEach(btn=>btn.addEventListener('click', e=>{
+      document.querySelectorAll('.lang-switch button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      setLang(btn.dataset.lang);
+    }));
+
+    setLang('ar'); // default
+
+    // ====== Elements ======
+    const rateLeft = document.getElementById('rateLeft');
+    const amountEuroLeft = document.getElementById('amountEuroLeft');
+    const amountDzdLeft = document.getElementById('amountDzdLeft');
+    const visaLeft = document.getElementById('visaLeft');
+    const ticketLeft = document.getElementById('ticketLeft');
+    const hotelLeft = document.getElementById('hotelLeft');
+    const foodLeft = document.getElementById('foodLeft');
+    const extraLeft = document.getElementById('extraLeft');
+
+    const productsDiv = document.getElementById('products');
+    const addProductBtn = document.getElementById('addProductBtn');
+
+    const goodsEurTotal = document.getElementById('goodsEurTotal');
+    const goodsDzdTotal = document.getElementById('goodsDzdTotal');
+    const customsTotal = document.getElementById('customsTotal');
+    const goodsPlus30Total = document.getElementById('goodsPlus30Total');
+    const taxTotal = document.getElementById('taxTotal');
+    const travelSumEl = document.getElementById('travelSum');
+    const grandTotalEl = document.getElementById('grandTotal');
+    const usedRateEl = document.getElementById('usedRate');
+    const wholesaleTotalEl = document.getElementById('wholesaleTotal');
+    const retailTotalEl = document.getElementById('retailTotal');
+    const totalPiecesEl = document.getElementById('totalPieces');
+    const profitStatusEl = document.getElementById('profitStatus');
+    const profitPercentEl = document.getElementById('profitPercent');
+    const netProfitEl = document.getElementById('netProfit');
+
+    const rateRight = document.getElementById('rateRight');
+    const linkMode = document.getElementById('linkMode');
+
+    const printPageBtn = document.getElementById('printPage');
+    const printInvoiceBtn = document.getElementById('printInvoice');
+
+    const THRESHOLD = 1800000;
+
+    // Products data model
+    let products = [];
+
+    function num(x){return isFinite(x)?Number(x):0}
+    function fmt(x){return (Math.round(num(x)*100)/100).toLocaleString('en-US')}
+
+    function addProduct(data={name:'منتج', wholesaleEur:0, sellPerPieceEur:0, pieces:1, interestPercent:0}){
+      const idx = products.length;
+      products.push(Object.assign({},data));
+      renderProducts();
+      recalcAll();
+    }
+
+    function removeProduct(i){ products.splice(i,1); renderProducts(); recalcAll(); }
+
+    function renderProducts(){
+      productsDiv.innerHTML='';
+      products.forEach((p,i)=>{
+        const el = document.createElement('div'); el.className='product card';
+        el.innerHTML = `
+          <div style="flex:2">
+            <label>اسم المنتج</label>
+            <input data-field="name" data-i="${i}" value="${p.name}" />
+          </div>
+          <div style="flex:1">
+            <label>سعر الجملة (EUR)</label>
+            <input data-field="wholesaleEur" data-i="${i}" type="number" step="0.01" value="${p.wholesaleEur}" />
+          </div>
+          <div style="flex:1">
+            <label>سعر بيع/القطعة (EUR)</label>
+            <input data-field="sellPerPieceEur" data-i="${i}" type="number" step="0.01" value="${p.sellPerPieceEur}" />
+          </div>
+          <div style="flex:1">
+            <label>عدد القطع</label>
+            <input data-field="pieces" data-i="${i}" type="number" step="1" value="${p.pieces}" />
+          </div>
+          <div style="flex:1">
+            <label>% فائدة</label>
+            <input data-field="interestPercent" data-i="${i}" type="number" step="0.01" value="${p.interestPercent}" />
+          </div>
+          <div style="width:40px;display:flex;align-items:center;justify-content:center"><button data-remove="${i}" class="btn secondary">×</button></div>
+        `;
+        productsDiv.appendChild(el);
+      });
+
+      // attach events
+      productsDiv.querySelectorAll('input').forEach(inp=>{
+        inp.addEventListener('input', e=>{
+          const i = num(e.target.dataset.i);
+          const field = e.target.dataset.field;
+          if(field){
+            const val = e.target.type==='number' ? num(e.target.value) : e.target.value;
+            products[i][field]=val;
+            recalcAll();
+          }
+        });
+      });
+      productsDiv.querySelectorAll('[data-remove]').forEach(btn=>btn.addEventListener('click', e=>{
+        removeProduct(num(e.target.dataset.remove));
+      }));
+    }
+
+    // Add initial single product
+    addProduct({name:'منتج 1', wholesaleEur:500, sellPerPieceEur:60, pieces:10, interestPercent:0});
+
+    addProductBtn.addEventListener('click', ()=>addProduct({name:'منتج '+(products.length+1), wholesaleEur:0, sellPerPieceEur:0, pieces:1, interestPercent:0}));
+
+    // sync right rate
+    linkMode.addEventListener('change', ()=>{ if(linkMode.value==='linked') rateRight.value = rateLeft.value; recalcAll(); });
+    rateLeft.addEventListener('input', ()=>{ if(linkMode.value==='linked') rateRight.value = rateLeft.value; recalcAll(); });
+
+    // calculate totals
+    function recalcAll(){
+      const rate = num(rateLeft.value);
+      usedRateEl.textContent = rate ? fmt(rate) : '-';
+      const converted = rate * num(amountEuroLeft.value);
+      amountDzdLeft.value = fmt(converted);
+
+      // products totals
+      let wholesaleTotal = 0; // EUR
+      let retailTotal = 0; // EUR
+      let totalPieces = 0;
+      products.forEach(p=>{
+        wholesaleTotal += num(p.wholesaleEur);
+        retailTotal += num(p.sellPerPieceEur) * num(p.pieces) * (1 + num(p.interestPercent)/100);
+        totalPieces += num(p.pieces);
+      });
+
+      wholesaleTotalEl.textContent = fmt(wholesaleTotal);
+      retailTotalEl.textContent = fmt(retailTotal);
+      totalPiecesEl.textContent = fmt(totalPieces);
+
+      const goodsEur = wholesaleTotal; // assume wholesale sum is base
+      const goodsDzd = goodsEur * rate;
+      goodsEurTotal.textContent = fmt(goodsEur);
+      goodsDzdTotal.textContent = fmt(goodsDzd);
+
+      const customs = 0.05 * goodsDzd;
+      customsTotal.textContent = fmt(customs);
+
+      const goodsPlus30 = goodsDzd * 1.30;
+      goodsPlus30Total.textContent = fmt(goodsPlus30);
+
+      const tax = 0.005 * goodsPlus30;
+      taxTotal.textContent = fmt(tax);
+
+      const travelSum = num(visaLeft.value)+num(ticketLeft.value)+num(hotelLeft.value)+num(foodLeft.value)+num(extraLeft.value);
+      travelSumEl.textContent = fmt(travelSum);
+
+      const grand = goodsPlus30 + customs + tax + travelSum;
+      grandTotalEl.textContent = fmt(grand);
+
+      // profit/loss calculation: expected revenue in DZD from retailTotal
+      const expectedRevenueDzd = retailTotal * rate;
+
+      const netProfit = expectedRevenueDzd - grand; // positive => profit
+      netProfitEl.textContent = fmt(netProfit);
+
+      const profitPercent = grand>0 ? (netProfit / grand * 100) : 0;
+      profitPercentEl.textContent = fmt(profitPercent);
+
+      profitStatusEl.textContent = netProfit>=0 ? 'رابح' : 'خاسر';
+      if(netProfit>=0){ profitStatusEl.className='status highlight-success'; } else { profitStatusEl.className='status highlight-danger'; }
+
+      // threshold highlight
+      const appEl = document.querySelector('.app');
+      if(converted > ${THRESHOLD}){ appEl.style.boxShadow='0 0 0 4px rgba(239,68,68,0.12), 0 10px 30px rgba(2,6,23,0.6)'; }
+      else { appEl.style.boxShadow='0 10px 30px rgba(2,6,23,0.6)'; }
+
+    }
+
+    // events
+    [rateLeft, amountEuroLeft, visaLeft, ticketLeft, hotelLeft, foodLeft, extraLeft].forEach(i=>i.addEventListener('input', recalcAll));
+
+    // initial calc
+    recalcAll();
+
+    // printing
+    printPageBtn.addEventListener('click', ()=>{
+      window.print();
+    });
+    printInvoiceBtn.addEventListener('click', ()=>{
+      // create a printable invoice in new window
+      const invoiceWindow = window.open('','_blank');
+      const html = generateInvoiceHtml();
+      invoiceWindow.document.write(html);
+      invoiceWindow.document.close();
+      invoiceWindow.print();
+    });
+
+    function generateInvoiceHtml(){
+      let rows = '';
+      products.forEach((p,i)=>{
+        const sellFinal = num(p.sellPerPieceEur) * (1+num(p.interestPercent)/100);
+        rows += `<tr><td>${i+1}</td><td>${p.name}</td><td>${fmt(p.pieces)}</td><td>${fmt(sellFinal)}</td><td>${fmt(sellFinal*p.pieces)}</td></tr>`;
+      });
+      const invoice = `
+        <html><head><meta charset="utf-8"><title>فاتورة</title>
+        <style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:8px;text-align:right}</style>
+        </head><body>
+        <h2>فاتورة المنتجات</h2>
+        <table><thead><tr><th>#</th><th>اسم المنتج</th><th>عدد</th><th>سعر/قطعة (EUR)</th><th>المجموع (EUR)</th></tr></thead><tbody>${rows}</tbody></table>
+        <p>إجمالي سعر الشراء بالجملة: ${fmt(num(wholesaleTotalEl.textContent))} EUR</p>
+        <p>إجمالي سعر البيع المتوقع: ${fmt(num(retailTotalEl.textContent))} EUR</p>
+        <p>الإجمالي الكلي تكلفة (DZD): ${fmt(num(grandTotalEl.textContent))}</p>
+        </body></html>`;
+      return invoice;
+    }
+
+  </script>
+</body>
+</html>
